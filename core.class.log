@@ -1,0 +1,102 @@
+[handleMsg]:  {
+  key: {
+    remoteJid: '5214423263843@s.whatsapp.net',
+    fromMe: false,
+    id: '3FF3546E0A52D6492F4F',
+    participant: undefined
+  },
+  messageTimestamp: 1758244144,
+  pushName: 'Ricardo Flores',
+  broadcast: false,
+  message: Message {
+    extendedTextMessage: ExtendedTextMessage { text: 'Menu', contextInfo: [ContextInfo] },
+    messageContextInfo: MessageContextInfo {
+      deviceListMetadata: [DeviceListMetadata],
+      deviceListMetadataVersion: 2
+    }
+  },
+  body: 'Menu',
+  from: '5214423263843'
+}
+[QUEUE_SE_ENVIO]:  {
+  ref: 'ans_adeeb291-4ca9-4465-8638-59c39a89046a',
+  keyword: 'key_045354b7-1397-402e-bb8d-9cfdab652eba',
+  answer: '🙋‍♀️ ¡Hola! *Soy AlicIA, tu asistente virtual de Recursos Humanos en BGS TECHNIC*. Por favor, selecciona una opción escribiendo la letra correspondiente:',
+  options: {
+    media: null,
+    buttons: [],
+    capture: false,
+    child: null,
+    delay: 0,
+    idle: null,
+    ref: null,
+    nested: [],
+    keyword: {},
+    callback: false
+  },
+  refSerialize: '0feaa29d03432a7c8c1f9c2d9117f30a'
+}
+[QUEUE_SE_ENVIO]:  {
+  ref: 'ans_01718615-aa63-42dd-9b29-0adfac93739b',
+  keyword: 'ans_adeeb291-4ca9-4465-8638-59c39a89046a',
+  answer: '*1*. 💰 Nómina / pagos 💵\n' +
+    '*2*. 📆 Permisos / Faltas y Asistencia 📋\n' +
+    '*3*. 🤒 Incapacidades 🏥\n' +
+    '*4*. 🏖️ Dudas de Vacaciones 📅\n' +
+    '*5*. 🍽️ Dudas de Comedor 🧾\n' +
+    '*6*. 🗣️ Otras dudas. Enviar un mensaje directo al chat de RH 💬\n' +
+    '*7*. 📮 Buzón de quejas',
+  options: {
+    media: null,
+    buttons: [],
+    capture: true,
+    child: null,
+    delay: 0,
+    idle: null,
+    ref: null,
+    nested: [],
+    keyword: {},
+    callback: true
+  },
+  refSerialize: '259eaa2af9b665b88185c9e2c4c58cdb'
+}
+[handleMsg]:  {
+  key: {
+    remoteJid: '5214423263843@s.whatsapp.net',
+    fromMe: false,
+    id: '3FDA2AFD061C0A1E9F8C',
+    participant: undefined
+  },
+  messageTimestamp: 1758244161,
+  pushName: 'Ricardo Flores',
+  broadcast: false,
+  message: Message {
+    extendedTextMessage: ExtendedTextMessage { text: '2', contextInfo: [ContextInfo] },
+    messageContextInfo: MessageContextInfo {
+      deviceListMetadata: [DeviceListMetadata],
+      deviceListMetadataVersion: 2
+    }
+  },
+  body: '2',
+  from: '5214423263843'
+}
+[handleMsg]:  {
+  key: {
+    remoteJid: '5214423263843@s.whatsapp.net',
+    fromMe: false,
+    id: '3FDA901E5C5DB04DF2AF',
+    participant: undefined
+  },
+  messageTimestamp: 1758244166,
+  pushName: 'Ricardo Flores',
+  broadcast: false,
+  message: Message {
+    extendedTextMessage: ExtendedTextMessage { text: '1', contextInfo: [ContextInfo] },
+    messageContextInfo: MessageContextInfo {
+      deviceListMetadata: [DeviceListMetadata],
+      deviceListMetadataVersion: 2
+    }
+  },
+  body: '1',
+  from: '5214423263843'
+}
