@@ -1,8 +1,55 @@
-const { createBot, createProvider, createFlow, addKeyword } = require('@bot-whatsapp/bot')
+require('dotenv').config();
+const mondaySdk = require('monday-sdk-js');
+const { createBot, createProvider, createFlow, addKeyword } = require('@bot-whatsapp/bot');
+const QRPortalWeb = require('@bot-whatsapp/portal');
+const BaileysProvider = require('@bot-whatsapp/provider/baileys');
+const MockAdapter = require('@bot-whatsapp/database/mock');
 
-const QRPortalWeb = require('@bot-whatsapp/portal')
-const BaileysProvider = require('@bot-whatsapp/provider/baileys')
-const MockAdapter = require('@bot-whatsapp/database/mock')
+// ===================== MONDAY =====================
+const monday = mondaySdk();
+monday.setToken(process.env.MONDAY_API_TOKEN);
+
+async function buscarVacacionesPorNombre(nombre) {
+  const query = `
+    query ($boardId: [ID!]) {
+      boards(ids: $boardId) {
+        items_page(limit: 200) {
+          items {
+            name
+            column_values(ids: ["n_meros3__1"]) {
+              text
+            }
+          }
+        }
+      }
+    }
+  `;
+
+  const variables = { boardId: 6884101599 }; // <-- tu tablero de vacaciones
+  const res = await monday.api(query, { variables });
+
+  const items = res.data.boards[0].items_page.items;
+
+  // Normalizamos nombre
+  const nombreNormalizado = nombre.trim().toLowerCase();
+
+  // Buscar coincidencia exacta
+  let match = items.find(i => i.name.trim().toLowerCase() === nombreNormalizado);
+
+  // Coincidencia parcial si no hay exacta
+  if (!match) {
+    match = items.find(i => i.name.trim().toLowerCase().includes(nombreNormalizado));
+  }
+
+  if (!match) return { found: false };
+
+  return {
+    found: true,
+    name: match.name,
+    dias: match.column_values[0]?.text || "0"
+  };
+}
+
 
 const subMenuNominaTexto = 
   "💰 *Consultas sobre Nómina / Pagos* 💵 \n\n" +
@@ -179,45 +226,120 @@ const subMenuVacacionesTexto =
   "🏖️ *Consultas sobre Vacaciones* 📅\n\n" +
   "Selecciona una opción escribiendo el número correspondiente:\n\n" +
   "*1*. 📋 ¿Cómo solicito vacaciones?\n" +
-  "*2*. 📆 ¿Cuántos días de vacaciones me quedan?\n" +
-  "*3*. 📌 Políticas generales sobre vacaciones\n" +
+  "*2*. 🔎 ¿Cuántos días de vacaciones tengo?\n" +
+  "*3*. 📌 Políticas generales\n" +
   "*4*. 🔙 Volver al menú principal";
 
-const flowVacaciones = addKeyword(["/^vacaciones$/i", "/^vacación$/i"])
-  .addAnswer(subMenuVacacionesTexto, { capture: true }, async (ctx, { flowDynamic, gotoFlow }) => {
+// 🔎 Función auxiliar para buscar en Monday
+async function buscarDiasVacacionesPorNombre(nombre) {
+  const query = `
+    query ($boardId: [ID!]) {
+      boards(ids: $boardId) {
+        items_page(limit: 200) {
+          items {
+            name
+            column_values(ids: ["n_meros3__1"]) {
+              text
+            }
+          }
+        }
+      }
+    }
+  `;
+  const variables = { boardId: 6884101599 }; // ID del tablero de vacaciones
+  const res = await monday.api(query, { variables });
+
+  const items = res.data?.boards?.[0]?.items_page?.items || [];
+  if (items.length === 0) return { found: false };
+
+  // Normalizar texto (minúsculas, quitar acentos y espacios raros)
+  const normalizar = (txt) =>
+    txt
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .trim();
+
+  const nombreNormalizado = normalizar(nombre);
+
+  // Coincidencia exacta
+  let match = items.find((i) => normalizar(i.name) === nombreNormalizado);
+
+  // Coincidencia parcial (si escriben solo nombre o apellido)
+  if (!match) {
+    match = items.find((i) => normalizar(i.name).includes(nombreNormalizado));
+  }
+
+  if (!match) return { found: false };
+
+  const dias = match.column_values[0]?.text ?? "—";
+  return { found: true, name: match.name, dias };
+}
+
+// 📂 Flow de Vacaciones
+const flowVacaciones = addKeyword(["vacaciones", "vacacion", "vacación"])
+  .addAnswer(subMenuVacacionesTexto, { capture: true }, async (ctx, { flowDynamic, gotoFlow, state }) => {
     const opcion = ctx.body.trim();
 
     switch (opcion) {
-    case "1":
+      case "1":
         return await flowDynamic(
           "📋 *Las vacaciones se solicitan a través del siguiente formulario:* \n\n" +
           "🌐 https://form.jotform.com/calidadyservicio.bgs/solicitud-de-vacaciones\n\n" +
-          "📲 Una vez que envíes tu solicitud, tu jefe directo evaluará si es posible otorgar los días solicitados.\n\n" +
-          "📬 *Recibirás una respuesta directamente por WhatsApp* al número que hayas registrado en el formulario. ✅\n\n" +
-          "🔁 Puedes regresar al menú escribiendo la palabra *MENU* 🏠"
+          "📲 Una vez enviada, tu jefe directo evaluará la solicitud. ✅"
         );
-    case "2":
-        return await flowDynamic(
-          "📆 *Para conocer cuántos días de vacaciones te quedan*, puedes consultarlo directamente con el coordinador de RH mediante WhatsApp +52 442 343 3075 identifícate con tu nombre y con gusto atenderá tu solicitud. \n\n" +
-          "🔁 Puedes regresar al menú escribiendo la palabra *MENU* 🏠"
-        );
-    case "3":
+
+      case "2":
+        await state.update({ esperandoNombreVacaciones: true });
+        return await flowDynamic("🧑‍💼 Por favor, escribe tu *nombre completo* tal como aparece en nómina.");
+
+      case "3":
         return await flowDynamic(
           "📌 *Políticas Generales:*\n\n" +
-          "- Debes cumplir al menos un año laboral para gozar de vacaciones.\n" +
-          "- Las vacaciones no se acumulan más de 2 periodos.\n" +
-          "- Se recomienda solicitarlas con al menos 5 días de anticipación.\n\n" +
-          "- *Ninguna vacación es automática*.\n\n" +
-          "🔁 Puedes regresar al menú escribiendo la palabra *MENU* 🏠"
+          "- Cumplir al menos 1 año laboral.\n" +
+          "- No se acumulan más de 2 periodos.\n" +
+          "- Solicítalas con mínimo 5 días de anticipación.\n\n" +
+          "🔁 Escribe *MENU* para volver al inicio."
         );
+
       case "4":
-        return gotoFlow(flowPrincipal);
+        return gotoFlow(flowPrincipal); // 🔙 regresa al menú principal
+
       default:
-        return await flowDynamic(
-          "❌ *Opción no válida.* Por favor, responde con un número del 1 al 3. 📲"
-        );
+        return await flowDynamic("❌ Opción no válida. Por favor, selecciona del 1 al 4.");
     }
-  });      
+  })
+  // 👉 Aquí capturamos el nombre después de la opción 2
+  .addAction({ capture: true }, async (ctx, { state, flowDynamic }) => {
+    const esperando = await state.get("esperandoNombreVacaciones");
+    if (!esperando) return; // si no estamos esperando el nombre, ignorar
+
+    const nombre = (ctx.body || "").trim();
+    await state.update({ esperandoNombreVacaciones: false });
+
+    try {
+      const res = await buscarDiasVacacionesPorNombre(nombre);
+
+      if (!res.found) {
+        return await flowDynamic(
+          `😕 No encontré registros con el nombre "*${nombre}*".\n\n` +
+          "Verifica la ortografía o consulta a RH (+52 442 343 3075).\n\n" +
+          "🔁 Escribe *MENU* para volver al inicio."
+        );
+      }
+
+      return await flowDynamic(
+        `✅ *${res.name}* tiene *${res.dias}* día(s) de vacaciones pendientes por tomar.\n\n` +
+        "🔁 Escribe *MENU* para volver al inicio."
+      );
+    } catch (err) {
+      console.error("❌ Error consultando Monday:", err);
+      return await flowDynamic(
+        "❌ Hubo un error al consultar la base de datos. Inténtalo más tarde o avisa a RH. 🙏\n\n" +
+        "🔁 Escribe *MENU* para volver al inicio."
+      );
+    }
+  });
 
 const subMenuComedorTexto =
   "🍽️ *Consultas sobre el Comedor* 🧾\n\n" +
